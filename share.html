@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>clipboard</title>
+    <title>share</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -26,7 +26,8 @@
             height: 100px;
             padding: 10px;
             box-sizing: border-box;
-            resize: none; /* 禁止调整大小 */
+            resize: none;
+            /* 禁止调整大小 */
         }
 
         button {
@@ -42,25 +43,35 @@
             height: 40px;
             background-color: #f4f4f4;
             padding: 10px;
-            overflow: auto; /* 添加滚动条 */
-            white-space: pre-wrap; /* 处理换行 */
-            word-wrap: break-word; /* 处理长单词换行 */
+            overflow: auto;
+            /* 添加滚动条 */
+            white-space: pre-wrap;
+            /* 处理换行 */
+            word-wrap: break-word;
+            /* 处理长单词换行 */
             border: 1px solid #ccc;
-            resize: none; /* 禁止调整大小 */
+            resize: none;
+            /* 禁止调整大小 */
         }
 
         ul {
-            list-style-type: none; /* 去掉默认的列表样式 */
-            padding: 0; /* 去掉内边距 */
-            width: 100%; /* 设置宽度与输入框一致 */
-            max-width: 500px; /* 与输入框一致 */
+            list-style-type: none;
+            /* 去掉默认的列表样式 */
+            padding: 0;
+            /* 去掉内边距 */
+            width: 100%;
+            /* 设置宽度与输入框一致 */
+            max-width: 500px;
+            /* 与输入框一致 */
         }
 
         li {
             /* margin: 5px 0;  列表项之间的间距 */
             /* padding: 5px; 列表项的内边距 */
-            background-color: #f9f9f9; /* 列表项背景色 */
-            border: 1px solid #ccc; /* 列表项边框 */
+            background-color: #f9f9f9;
+            /* 列表项背景色 */
+            border: 1px solid #ccc;
+            /* 列表项边框 */
         }
 
         .contentBox {
@@ -71,34 +82,47 @@
 
         .contentText {
             width: 100%;
-            max-width: 500px; /* 与 responseOutput 一致 */
+            max-width: 500px;
+            /* 与 responseOutput 一致 */
             height: 100px;
             padding: 10px;
             box-sizing: border-box;
-            resize: none; /* 禁止调整大小 */
-            background-color: #f4f4f4; /* 与 responseOutput 一致 */
-            border: 1px solid #ccc; /* 与 responseOutput 一致 */
+            resize: none;
+            /* 禁止调整大小 */
+            background-color: #f4f4f4;
+            /* 与 responseOutput 一致 */
+            border: 1px solid #ccc;
+            /* 与 responseOutput 一致 */
         }
 
         .copyButton {
             margin-top: 5px;
             cursor: pointer;
-            width: 100px; /* 设置复制按钮的宽度 */
+            width: 100px;
+            /* 设置复制按钮的宽度 */
         }
 
         .timeCopyBox {
             display: flex;
-            justify-content: space-between; /* 使时间和按钮在同一行 */
-            align-items: center; /* 垂直居中对齐 */
-            width: 100%; /* 使时间和按钮占满一行 */
+            justify-content: space-between;
+            /* 使时间和按钮在同一行 */
+            align-items: center;
+            /* 垂直居中对齐 */
+            width: 100%;
+            /* 使时间和按钮占满一行 */
         }
     </style>
 </head>
 
 <body>
-    <h1>clipboard</h1>
+    <label for="noticeInput">文件分享</label>
+    <ul>
+        <li> <a href="https://up.ly93.cc/" target="_blank">涟漪文件直链</a></li>
+        <li> <a href="https://upfile.live/" target="_blank">Upfile</a></li>
+        <li> <a href="https://wormhole.app/" target="_blank">Wormhole 虫洞</a></li>
+    </ul>
 
-    <label for="noticeInput">内容（可换行）:</label>
+    <label for="noticeInput">内容分享:</label>
     <textarea id="noticeInput" placeholder="请输入内容..."></textarea>
 
     <div style="display: flex; gap: 10px; margin: 10px 0;">
@@ -259,7 +283,7 @@
             }
 
             document.getElementById("responseOutput").value = "已获取内容！";
-            
+
             // 清空之前的列表
             const dataList = document.getElementById("dataList");
             dataList.innerHTML = ""; // 清空列表
