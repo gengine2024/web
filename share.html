@@ -111,6 +111,32 @@
             width: 100%;
             /* 使时间和按钮占满一行 */
         }
+
+        /* 添加全屏覆盖样式 */
+        #loading {
+            position: fixed;
+            /* 固定定位 */
+            top: 0;
+            /* 顶部对齐 */
+            left: 0;
+            /* 左侧对齐 */
+            width: 100%;
+            /* 宽度100% */
+            height: 100%;
+            /* 高度100% */
+            background-color: rgba(0, 0, 0, 0.7);
+            /* 透明黑色背景 */
+            color: white;
+            /* 字体颜色为白色 */
+            display: flex;
+            /* 使用flex布局 */
+            justify-content: center;
+            /* 水平居中 */
+            align-items: center;
+            /* 垂直居中 */
+            z-index: 1000;
+            /* 确保在最上层 */
+        }
     </style>
 </head>
 
@@ -255,9 +281,6 @@
                     body: JSON.stringify(newJSContent)
                 });
 
-                // 隐藏加载指示器
-                document.getElementById("loading").style.display = "none";
-
                 if (response.ok) {
                     document.getElementById("responseOutput").value = "已发布！";
                     alert("发布成功！"); // 发布成功弹窗提示
@@ -265,10 +288,11 @@
                     document.getElementById("responseOutput").value = "发布失败！";
                 }
             } catch (error) {
-                // 隐藏加载指示器
-                document.getElementById("loading").style.display = "none";
                 document.getElementById("responseOutput").value = error.message; // 显示超时错误
             }
+
+            // 隐藏加载指示器
+            document.getElementById("loading").style.display = "none";
         });
 
         document.getElementById("getRequest").addEventListener("click", async () => {
