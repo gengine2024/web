@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="zh">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>clipboard</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        label {
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+
+        textarea {
+            width: 100%;
+            max-width: 500px;
+            height: 100px;
+            padding: 10px;
+            box-sizing: border-box;
+            resize: none; /* 禁止调整大小 */
+        }
+
+        button {
+            width: 100%;
+            max-width: 250px;
+            padding: 10px;
+            cursor: pointer;
+        }
+
+        .responseOutput {
+            width: 100%;
+            max-width: 500px;
+            height: 40px;
+            background-color: #f4f4f4;
+            padding: 10px;
+            overflow: auto; /* 添加滚动条 */
+            white-space: pre-wrap; /* 处理换行 */
+            word-wrap: break-word; /* 处理长单词换行 */
+            border: 1px solid #ccc;
+            resize: none; /* 禁止调整大小 */
+        }
+
+        ul {
+            list-style-type: none; /* 去掉默认的列表样式 */
+            padding: 0; /* 去掉内边距 */
+            width: 100%; /* 设置宽度与输入框一致 */
+            max-width: 500px; /* 与输入框一致 */
+        }
+
+        li {
+            /* margin: 5px 0;  列表项之间的间距 */
+            /* padding: 5px; 列表项的内边距 */
+            background-color: #f9f9f9; /* 列表项背景色 */
+            border: 1px solid #ccc; /* 列表项边框 */
+        }
+
+        .contentBox {
+            display: flex;
+            flex-direction: column;
+            margin-bottom: 10px;
+        }
+
+        .contentText {
+            width: 100%;
+            max-width: 500px; /* 与 responseOutput 一致 */
+            height: 100px;
+            padding: 10px;
+            box-sizing: border-box;
+            resize: none; /* 禁止调整大小 */
+            background-color: #f4f4f4; /* 与 responseOutput 一致 */
+            border: 1px solid #ccc; /* 与 responseOutput 一致 */
+        }
+
+        .copyButton {
+            margin-top: 5px;
+            cursor: pointer;
+            width: 100px; /* 设置复制按钮的宽度 */
+        }
+
+        .timeCopyBox {
+            display: flex;
+            justify-content: space-between; /* 使时间和按钮在同一行 */
+            align-items: center; /* 垂直居中对齐 */
+            width: 100%; /* 使时间和按钮占满一行 */
+        }
+    </style>
+</head>
+
+<body>
+    <h1>clipboard</h1>
+
+    <label for="noticeInput">内容（可换行）:</label>
+    <textarea id="noticeInput" placeholder="请输入内容..."></textarea>
+
+    <div style="display: flex; gap: 10px; margin: 10px 0;">
+        <button id="putRequest">发布</button>
+        <button id="getRequest">读取</button>
+    </div>
+
+    <textarea id="responseOutput" class="responseOutput" readonly></textarea>
+
+    <div id="loading" style="display: none;">加载中...</div>
+
+    <ul id="dataList"></ul>
+
+    <script>
+        const url = "https://jsonblob.com/api/jsonBlob/1313327800635285504";
+
+        // var jsContent = {};
+
+        // 获取当前时间并格式化为 YYYYMMDDHHMMSS
+        function getCurrentTime() {
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0'); // 月份从0开始
+            const day = String(now.getDate()).padStart(2, '0');
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const seconds = String(now.getSeconds()).padStart(2, '0');
+            return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+        }
+
+        // 设置请求超时的函数
+        function fetchWithTimeout(url, options, timeout = 20000) {
+            return Promise.race([
+                fetch(url, options),
+                new Promise((_, reject) =>
+                    setTimeout(() => reject(new Error('请求超时')), timeout)
+                )
+            ]);
+        }
+
+        async function getContent() {
+            try {
+                const response = await fetchWithTimeout(url, {
+                    method: "GET",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Accept": "application/json"
+                    }
+                });
+
+                if (response.ok) {
+                    const jsData = await response.json();
+                    return jsData;
+                } else {
+                    return null;
+                }
+            } catch (error) {
+                // 隐藏加载指示器
+                return null;
+            }
+        }
+
+        function handleJSContent(jsContent, newData, stime) {
+            try {
+                if (null === jsContent || undefined === jsContent || !jsContent.hasOwnProperty("data")) {
+                    jsContent = { "title": "clipboard", "data": [], "time": stime };
+                }
+
+                if (!jsContent.hasOwnProperty("data")) {
+                    jsContent.data = [];
+                }
+
+                const dataArray = jsContent.data;
+                if (dataArray.length >= 10) {
+                    dataArray.shift(); // 删除第一个元素
+                }
+
+                // 添加新的数据到数组
+                dataArray.push(newData);
+
+                return jsContent;
+            }
+            catch (e) {
+                jsContent = { "title": "clipboard", "data": [], "time": stime };
+                data.data.push(newData);
+
+                return jsContent;
+            }
+        }
+
+        window.onload = function () {
+            // 页面加载完成后，确保加载指示器不显示
+            document.getElementById("loading").style.display = "none";
+        };
+
+        document.getElementById("putRequest").addEventListener("click", async () => {
+            // 显示加载指示器
+            document.getElementById("loading").style.display = "flex";
+
+            const content = document.getElementById("noticeInput").value.trim();
+
+            // 检查内容是否为空
+            if (!content) {
+                alert("内容不能为空，请输入内容后再发送请求。");
+
+                document.getElementById("loading").style.display = "none";
+                return; // 终止函数执行
+            }
+
+            // 二次确认提示
+            //const confirmMessage = `您即将发布以下内容：\n${content}\n\n确认发布吗？`;
+            //if (!confirm(confirmMessage)) {
+            //    return; // 用户取消，终止函数执行
+            //}
+
+            const jsContent = await getContent();
+
+            const stime = getCurrentTime();
+            const newData = { "content": content, "time": stime };
+
+            const newJSContent = handleJSContent(jsContent, newData, stime);
+
+            try {
+                const response = await fetchWithTimeout(url, {
+                    method: "PUT",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Accept": "application/json"
+                    },
+                    body: JSON.stringify(newJSContent)
+                });
+
+                // 隐藏加载指示器
+                document.getElementById("loading").style.display = "none";
+
+                if (response.ok) {
+                    document.getElementById("responseOutput").value = "已发布！";
+                    alert("发布成功！"); // 发布成功弹窗提示
+                } else {
+                    document.getElementById("responseOutput").value = "发布失败！";
+                }
+            } catch (error) {
+                // 隐藏加载指示器
+                document.getElementById("loading").style.display = "none";
+                document.getElementById("responseOutput").value = error.message; // 显示超时错误
+            }
+        });
+
+        document.getElementById("getRequest").addEventListener("click", async () => {
+            // 显示加载指示器
+            document.getElementById("loading").style.display = "flex";
+
+            const jsContent = await getContent();
+            if (!jsContent) {
+                document.getElementById("responseOutput").value = "读取失败！";
+                document.getElementById("loading").style.display = "none";
+                return;
+            }
+
+            document.getElementById("responseOutput").value = "已获取内容！";
+            
+            // 清空之前的列表
+            const dataList = document.getElementById("dataList");
+            dataList.innerHTML = ""; // 清空列表
+
+            // 按时间降序排列数据
+            jsContent.data.sort((a, b) => b.time.localeCompare(a.time));
+
+            // 将数据逐行添加到列表中
+            jsContent.data.forEach(item => {
+                const li = document.createElement("li");
+
+                // 创建只读文本框显示内容
+                const contentBox = document.createElement("div");
+                contentBox.className = "contentBox";
+
+                const contentText = document.createElement("textarea");
+                contentText.className = "contentText";
+                contentText.value = item.content;
+                contentText.readOnly = true; // 设置为只读
+
+                const timeCopyBox = document.createElement("div");
+                timeCopyBox.className = "timeCopyBox";
+
+                const timeLabel = document.createElement("span");
+                timeLabel.textContent = `时间: ${item.time}`; // 格式化时间
+
+                const copyButton = document.createElement("button");
+                copyButton.className = "copyButton";
+                copyButton.textContent = "复制内容";
+                copyButton.onclick = () => {
+                    navigator.clipboard.writeText(item.content).then(() => {
+                        alert("内容已复制到剪贴板！");
+                    });
+                };
+
+                timeCopyBox.appendChild(timeLabel);
+                timeCopyBox.appendChild(copyButton);
+                contentBox.appendChild(contentText);
+                contentBox.appendChild(timeCopyBox);
+                li.appendChild(contentBox);
+                dataList.appendChild(li);
+            });
+
+            document.getElementById("loading").style.display = "none";
+        });
+    </script>
+</body>
+
+</html>
