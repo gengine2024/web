@@ -93,11 +93,11 @@
                     // 创建文本
                     const li = document.createElement('li');
 
-                    var msg = `${device.productName} </br>  [VID:${device.vendorId.toString(16).padStart(4, "0")}  PID:${device.productId.toString(16).padStart(4, "0")}]`;
+                    var msg = `${device.productName} </br>[VID:${device.vendorId.toString(16).padStart(4, "0")}  PID:${device.productId.toString(16).padStart(4, "0")}]`;
                     if (null !== device.collections && undefined !== device.collections && device.collections.length > 0) {
                         var index = 1;
                         device.collections.forEach(element => {
-                            msg = msg + `${index}: usage=${element.usage}, usagePage=${element.usagePage}</br>`;
+                            msg = msg + `</br>  ${index}: usage=${element.usage}, usagePage=${element.usagePage}</br>`;
                             if (null !== element.featureReports && undefined !== element.featureReports && element.featureReports.length > 0) {
                                 const item = element.featureReports[0].items[0];
                                 msg = msg + `  featureReports reportId=${element.featureReports[0].reportId} reprotCount=${item.reportCount},reportSize=${item.reportSize}</br>`;
@@ -133,18 +133,42 @@
 
                     // 创建按钮
                     const button = document.createElement('button');
-                    button.textContent = '选择设备';
+                    button.textContent = '选择写入设备';
                     button.onclick = () => {
                         deviceWrite = device; // 选择设备
                         console.log('已选择设备:', deviceWrite);
                     };
-
                     li.appendChild(button);
+
+                    // 创建按钮
+                    const button2 = document.createElement('button');
+                    button2.textContent = '选择接收设备';
+                    button2.onclick = () => {
+                        deviceReceive = device; // 选择设备
+                        console.log('已选择设备:', deviceWrite);
+                        OnReceive();
+                    };
+                    li.appendChild(button2);
+
                     deviceList.appendChild(li);
                 });
             } catch (error) {
                 console.error('请求设备失败:', error);
                 // return null;
+            }
+        }
+
+        async function OnReceive() {
+            if (!deviceReceive.opened) {
+                await deviceReceive.open(); // 打开设备
+                console.log('Device opened successfully');
+
+                // 监听设备输入报告
+                deviceReceive.addEventListener('inputreport', event => {
+                    const { data, reportId } = event;
+                    const value = new Uint8Array(data.buffer);
+                    console.log(`收到数据 (报告ID ${reportId}): ${Array.from(value)}`);
+                });
             }
         }
 
@@ -167,11 +191,13 @@
                     });
                 }
 
-                const result = await deviceWrite.sendFeatureReport(reportId, data);
+                await deviceWrite.sendFeatureReport(reportId, data);
 
-                console.log('数据写入成功:', result);
+                console.log('数据写入成功');
+                alert("数据写入成功");
             } catch (error) {
                 console.error('写入设备时出错:', error);
+                alert("写入设备时出错");
             } finally {
                 await deviceWrite.close(); // 关闭设备
             }
@@ -179,7 +205,6 @@
 
         document.getElementById("writeToDeviceButton").addEventListener("click", async () => {
             if (!deviceWrite) {
-                console.error('没有选择设备');
                 alert("请选选择需要操作的设备");
                 return;
             }
