@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="zh">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>USB 设备写入示例</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            padding: 0;
+        }
+
+        label {
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+
+        input {
+            width: 100%;
+            max-width: 500px;
+            padding: 10px;
+            margin-bottom: 20px;
+            box-sizing: border-box;
+        }
+
+        textarea {
+            width: 100%;
+            max-width: 500px;
+            height: 100px;
+            padding: 10px;
+            margin-bottom: 20px;
+            box-sizing: border-box;
+        }
+
+        button {
+            padding: 10px 15px;
+            cursor: pointer;
+        }
+
+        ul {
+            list-style-type: none;
+            width: 100%;
+            max-width: 500px;
+            padding: 0;
+        }
+
+        li {
+            padding: 10px;
+            border: 1px solid #ccc;
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>WebHID写入USB设备示例</h1>
+
+    <button id="btnLoadDevice" onclick="loadDevice()">加载设备列表</button>
+    </br>
+
+    <ul id="deviceList"></ul>
+    </br>
+
+    <label>特征报告Id(ReportId): </label>
+    </br>
+    <input type="text" id="txtReportId" placeholder="容园设备为0" />
+
+    </br>
+    <label for="dataInput">输入要写入的数据（例如：E2 A0 F8 00）:</label>
+    </br>
+    <textarea type="text" id="txtData"
+        placeholder="输入十六进制数据...">09 03 02 00 00 00 00 f1 00 00 04 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00</textarea>
+    </br>
+    <button id="writeToDeviceButton">写入数据到USB设备</button>
+
+    <script>
+        let deviceWrite = null;   // 容园设备写数据节点
+        let deviceReceive = null; // 容园设备监听消息节点
+
+        async function loadDevice() {
+            try {
+                const devices = await navigator.hid.requestDevice({ filters: [] });
+                console.dir(devices);
+
+                // 清空设备列表
+                const deviceList = document.getElementById("deviceList");
+                deviceList.innerHTML = '';
+
+                // 遍历设备并添加到列表
+                devices.forEach(device => {
+                    // 创建文本
+                    const li = document.createElement('li');
+
+                    var msg = `${device.productName} </br>  [VID:${device.vendorId.toString(16).padStart(4, "0")}  PID:${device.productId.toString(16).padStart(4, "0")}]`;
+                    if (null !== device.collections && undefined !== device.collections && device.collections.length > 0) {
+                        var index = 1;
+                        device.collections.forEach(element => {
+                            msg = msg + `${index}: usage=${element.usage}, usagePage=${element.usagePage}</br>`;
+                            if (null !== element.featureReports && undefined !== element.featureReports && element.featureReports.length > 0) {
+                                const item = element.featureReports[0].items[0];
+                                msg = msg + `  featureReports reportId=${element.featureReports[0].reportId} reprotCount=${item.reportCount},reportSize=${item.reportSize}</br>`;
+                            } else {
+                                msg = msg + `  featureReports null</br>`;
+                            }
+
+                            if (null !== element.inputReports && undefined !== element.inputReports && element.inputReports.length > 0) {
+                                const item = element.inputReports[0].items[0];
+                                msg = msg + `  inputReports reportId=${element.inputReports[0].reportId} reprotCount=${item.reportCount},reportSize=${item.reportSize}</br>`;
+                            } else {
+                                msg = msg + `  inputReports null</br>`;
+                            }
+
+                            if (null !== element.outputReports && undefined !== element.outputReports && element.outputReports.length > 0) {
+                                const item = element.outputReports[0].items[0];
+                                msg = msg + `  outputReports reportId=${element.outputReports[0].reportId} reprotCount=${item.reportCount},reportSize=${item.reportSize}</br>`;
+                            } else {
+                                msg = msg + `  outputReports null</br>`;
+                            }
+
+                            msg = msg + `</br>`;
+                            index++;
+                        });
+                    }
+
+                    const lb = document.createElement("label");
+                    lb.innerHTML = msg;
+                    li.appendChild(lb);
+
+                    // 换行
+                    li.appendChild(document.createElement('br'));
+
+                    // 创建按钮
+                    const button = document.createElement('button');
+                    button.textContent = '选择设备';
+                    button.onclick = () => {
+                        deviceWrite = device; // 选择设备
+                        console.log('已选择设备:', deviceWrite);
+                    };
+
+                    li.appendChild(button);
+                    deviceList.appendChild(li);
+                });
+            } catch (error) {
+                console.error('请求设备失败:', error);
+                // return null;
+            }
+        }
+
+        async function writeToDevice(reportId, data) {
+            if (!deviceWrite) {
+                console.error('没有选择设备');
+                return;
+            }
+
+            try {
+                if (!deviceWrite.opened) {
+                    await deviceWrite.open(); // 打开设备
+                    console.log('Device opened successfully');
+
+                    // 监听设备输入报告
+                    deviceWrite.addEventListener('inputreport', event => {
+                        const { data, reportId } = event;
+                        const value = new Uint8Array(data.buffer);
+                        console.debug(`收到数据 (报告ID ${reportId}): ${Array.from(value)}`);
+                    });
+                }
+
+                const result = await deviceWrite.sendFeatureReport(reportId, data);
+
+                console.log('数据写入成功:', result);
+            } catch (error) {
+                console.error('写入设备时出错:', error);
+            } finally {
+                await deviceWrite.close(); // 关闭设备
+            }
+        }
+
+        document.getElementById("writeToDeviceButton").addEventListener("click", async () => {
+            if (!deviceWrite) {
+                console.error('没有选择设备');
+                alert("请选选择需要操作的设备");
+                return;
+            }
+
+            try {
+                const reportId = parseInt(document.getElementById("txtReportId").value.trim());
+                if (Number.isNaN(reportId) || reportId > 255) {
+                    alert("请输入正确的reportId");
+                    return;
+                }
+
+                const inputData = document.getElementById("txtData").value.trim();
+                if (null === inputData || undefined === inputData || '' === inputData) {
+                    alert("请输入写入数据");
+                    return;
+                }
+
+                const hexArray = inputData.split(' ').map(hex => parseInt(hex, 16)); // 转换为字节数组
+                const dataToSend = new Uint8Array(hexArray); // 创建 Uint8Array
+
+                await writeToDevice(reportId, dataToSend); // 调用写入函数
+            } catch (error) {
+                console.error('输入数据格式有误:', error);
+            }
+        });
+
+
+        window.addEventListener("load", function () {
+            console.log("页面已加载完成！");
+            navigator.usb.addEventListener("connect", (e) => {
+                console.log("usb 新连上的设备", e.device);
+            });
+
+            navigator.usb.addEventListener("disconnect", (e) => {
+                console.log("usb 断开的设备", e.device);
+            });
+
+            navigator.hid.addEventListener("connect", (e) => {
+                console.log(`HID 新连上的设备${e.device}`);
+                console.dir(e);
+            });
+
+            navigator.hid.addEventListener("disconnect", (e) => {
+                console.log(`HID 断开连接：${e.device}`);
+                console.dir(e);
+            });
+        });
+    </script>
+</body>
+
+</html>
