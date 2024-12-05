@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="zh">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>USB 设备读取示例</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            padding: 0;
+        }
+
+        label {
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+
+        input {
+            width: 100%;
+            max-width: 500px;
+            padding: 10px;
+            margin-bottom: 20px;
+            box-sizing: border-box;
+        }
+
+        textarea {
+            width: 100%;
+            max-width: 500px;
+            height: 100px;
+            padding: 10px;
+            margin-bottom: 20px;
+            box-sizing: border-box;
+        }
+
+        button {
+            padding: 10px 15px;
+            cursor: pointer;
+        }
+
+        ul {
+            list-style-type: none;
+            width: 100%;
+            max-width: 500px;
+            padding: 0;
+        }
+
+        li {
+            padding: 10px;
+            border: 1px solid #ccc;
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>USB 设备读取示例(读取显示器ModelName)</h1>
+
+    <button id="btnLoadDevice" onclick="loadDevice()">加载设备列表</button>
+    </br>
+
+    <ul id="deviceList"></ul>
+    </br>
+
+    <script>
+        /** 转换时间 */
+        function convertDateTime(date) {
+            const hours = String(date.getHours()).padStart(2, '0');    // 获取小时，并保证两位数
+            const minutes = String(date.getMinutes()).padStart(2, '0');  // 获取分钟，并保证两位数
+            const seconds = String(date.getSeconds()).padStart(2, '0');  // 获取秒，并保证两位数
+            const milliseconds = String(date.getMilliseconds()).padStart(3, '0');  // 获取毫秒，并保证三位数
+
+            // 格式化为 "HH:mm:ss.SSS" 形式
+            return `${hours}:${minutes}:${seconds}.${milliseconds}`;
+        }
+
+        /** 等待多少毫秒 */
+        async function sleep(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+
+        function bytesToString(bytes) {
+            let result = '';
+
+            for (let i = 0; i < bytes.length; i++) {
+                if (bytes[i] === 0x00) {
+                    break;  // 遇到 0x00 时停止
+                }
+                result += String.fromCharCode(bytes[i]);
+            }
+
+            return result;
+        }
+
+        /** 解析标准内容 */
+        function getStandardContent(data) {
+            const ReadDataBaseLength = 0x80; // （根据你的需求调整）
+
+            // 计算 info 数组的长度
+            const infoLength = data[1] - ReadDataBaseLength;
+            var info;
+
+            // 判断 data[5] 的值来决定从哪个位置复制数据
+            if (data[5] === 0) {
+                // 从索引 6 开始复制数据
+                info = new Uint8Array(infoLength - (6 - 2));
+                info.set(data.slice(6, 6 + info.length));
+            } else {
+                // 从索引 5 开始复制数据
+                info = new Uint8Array(infoLength - (5 - 2));
+                info.set(data.slice(5, 5 + info.length));
+            }
+
+            return info;
+        }
+
+        let selDevice = null;   // 容园设备写数据节点
+
+        async function loadDevice() {
+            try {
+                const device = await navigator.usb.requestDevice({ filters: [] });
+                console.dir(device);
+
+                // 清空设备列表
+                const deviceList = document.getElementById("deviceList");
+                deviceList.innerHTML = '';
+
+                // 创建文本
+                const li = document.createElement('li');
+
+                const version = device.deviceVersionMajor.toString(16).padStart(2, "0") + device.deviceVersionMinor.toString(16) + device.deviceVersionSubminor.toString(16);
+                var msg = `productName = ${device.productName} </br>[VID:${device.vendorId.toString(16).padStart(4, "0")}  PID:${device.productId.toString(16).padStart(4, "0")}  Ver:${version}]`;
+                msg = msg + `</br>deviceClass = ${device.deviceClass}`;
+                msg = msg + `</br>deviceSubclass = ${device.deviceSubclass}`;
+                msg = msg + `</br>deviceProtocol = ${device.deviceProtocol}`;
+
+                const lb = document.createElement("label");
+                lb.innerHTML = msg;
+                li.appendChild(lb);
+
+                // 换行
+                li.appendChild(document.createElement('br'));
+
+                // 创建按钮
+                const button = document.createElement('button');
+                button.textContent = '读取ModelName';
+                button.onclick = () => {
+                    selDevice = device; // 选择设备
+                    console.log('选择设备:', selDevice);
+                    getModelName();
+                };
+                li.appendChild(button);
+
+                deviceList.appendChild(li);
+            } catch (error) {
+                console.error('请求设备失败:', error);
+            }
+        }
+
+        async function getModelName() {
+            try {
+                await selDevice.open();
+                console.log('Device opened');
+
+                await selDevice.selectConfiguration(1);
+                console.log('Configuration selected');
+
+                await selDevice.claimInterface(0);
+                console.log('Interface claimed');
+
+                // 读取显示器名称，先发送指令最后一个值位checksum，前面所以内容的异或
+                const data = new Uint8Array([0x6E, 0x51, 0x86, 0x01, 0xFE, 0xE9, 0x0D, 0x00, 0x00, 0xA2]);
+                // 发送数据
+                await selDevice.controlTransferOut({
+                    requestType: 'vendor',
+                    recipient: 'device',
+                    request: 0xB2,
+                    value: 0x0000,
+                    index: 0x0000,
+                }, data.buffer).then(() => {
+                    console.log('Control command sent successfully');
+                }).catch(error => {
+                    console.error('Error sending control command:', error);
+                });
+
+                console.log(convertDateTime(new Date()));
+
+                await sleep(150);
+
+                console.log(convertDateTime(new Date()));
+
+                // 读取控制响应
+                const result = await selDevice.controlTransferIn({
+                    requestType: 'vendor',
+                    recipient: 'device',
+                    request: 0xA3,
+                    value: 0x0000,
+                    index: 0x006f,
+                }, 0x20).then(result => {
+                    const tempBytes = new Uint8Array(result.data.buffer);
+                    console.log('Control response received:', tempBytes);
+
+                    const bytes = getStandardContent(tempBytes);
+                    console.log('model name bytes:', bytes);
+
+                    const str = bytesToString(bytes);
+                    alert(`model name:${str}`);
+                    console.log(str);  // 输出: "Hello"
+                }).catch(error => {
+                    console.error('Error reading control response:', error);
+                });
+
+
+            } catch (error) {
+                console.error('写入设备时出错:', error);
+            } finally {
+                await selDevice.close(); // 关闭设备
+            }
+        }
+
+        window.addEventListener("load", function () {
+            console.log("页面已加载完成！");
+            navigator.usb.addEventListener("connect", (e) => {
+                console.log("usb 新连上的设备", e.device);
+            });
+
+            navigator.usb.addEventListener("disconnect", (e) => {
+                console.log("usb 断开的设备", e.device);
+            });
+
+            navigator.hid.addEventListener("connect", (e) => {
+                console.log(`HID 新连上的设备${e.device}`);
+                console.dir(e);
+            });
+
+            navigator.hid.addEventListener("disconnect", (e) => {
+                console.log(`HID 断开连接：${e.device}`);
+                console.dir(e);
+            });
+        });
+    </script>
+</body>
+
+</html>
