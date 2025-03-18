@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>进制转换工具</title>
+    <title>Hex Convert</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -78,7 +78,7 @@
         .input-row {
             display: flex;
             align-items: center;
-            gap: 20px;
+            gap: 0px;
         }
         .input-label {
             min-width: 80px;
@@ -131,41 +131,41 @@
 </head>
 <body>
     <div class="container">
-        <h1>进制转换工具</h1>
+        <h1>Hex Convert</h1>
         
         <div class="input-group">
             <div class="input-row">
-                <label class="input-label" for="size-select">选择位数：</label>
+                <label class="input-label" for="size-select">Select：</label>
                 <select id="size-select">
-                    <option value="8">1 字节 (8位)</option>
-                    <option value="16">2 字节 (16位)</option>
-                    <option value="32">4 字节 (32位)</option>
-                    <option value="64">8 字节 (64位)</option>
+                    <option value="8">1 byte (8 bit)</option>
+                    <option value="16">2 byte (16 bit)</option>
+                    <option value="32">4 byte (32 bit)</option>
+                    <option value="64">8 byte (64 bit)</option>
                 </select>
             </div>
         </div>
 
         <div class="input-group">
             <div class="input-row">
-                <label class="input-label" for="decimal-input">十进制：</label>
-                <input type="text" id="decimal-input" placeholder="输入十进制数">
+                <label class="input-label" for="decimal-input">DEC：</label>
+                <input type="text" id="decimal-input" placeholder="Please input DEC">
             </div>
         </div>
 
         <div class="input-group">
             <div class="input-row">
-                <label class="input-label">二进制：</label>
+                <label class="input-label">BIN：</label>
                 <div class="binary-container">
                     <div id="binary-inputs" class="bit-container"></div>
-                    <button class="copy-button" onclick="copyBinary()">复制</button>
+                    <button class="copy-button" onclick="copyBinary()">Copy</button>
                 </div>
             </div>
         </div>
 
         <div class="input-group">
             <div class="input-row">
-                <label class="input-label" for="hex-input">十六进制：</label>
-                <input type="text" id="hex-input" placeholder="输入十六进制数">
+                <label class="input-label" for="hex-input">HEX：</label>
+                <input type="text" id="hex-input" placeholder="Please input HEX">
             </div>
         </div>
     </div>
