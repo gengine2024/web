@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>进制转换工具</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 100%;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .input-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+        select {
+            width: 200px;
+            padding: 8px;
+            margin-bottom: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        #decimal-input, #hex-input {
+            width: 200px;
+        }
+        .bit-container {
+            display: flex;
+            gap: 2px;
+            flex-wrap: wrap;
+            margin-bottom: 15px;
+        }
+        .bit-input {
+            width: 24px !important;
+            height: 24px;
+            text-align: center;
+            padding: 2px;
+            font-size: 14px;
+        }
+        .bit-position {
+            font-size: 10px;
+            text-align: center;
+            color: #666;
+            width: 24px;
+            margin-bottom: 1px;
+        }
+        .bit-column {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .bit-spacer {
+            width: 6px;
+        }
+        h1 {
+            margin-top: 0;
+            margin-bottom: 20px;
+            color: #333;
+        }
+        .input-row {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+        .input-label {
+            min-width: 80px;
+        }
+        .copy-button {
+            padding: 4px 12px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-left: 10px;
+        }
+        .copy-button:hover {
+            background-color: #45a049;
+        }
+        .copy-button:active {
+            background-color: #3d8b40;
+        }
+        .binary-container {
+            display: flex;
+            align-items: center;
+        }
+        .byte-group-0 {
+            background-color: #f0f8ff; /* 浅蓝色 */
+        }
+        .byte-group-1 {
+            background-color: #fff0f0; /* 浅红色 */
+        }
+        .byte-group-2 {
+            background-color: #f0fff0; /* 浅绿色 */
+        }
+        .byte-group-3 {
+            background-color: #fff8f0; /* 浅橙色 */
+        }
+        .byte-group-4 {
+            background-color: #f8f0ff; /* 浅紫色 */
+        }
+        .byte-group-5 {
+            background-color: #f0ffff; /* 浅青色 */
+        }
+        .byte-group-6 {
+            background-color: #fffff0; /* 浅黄色 */
+        }
+        .byte-group-7 {
+            background-color: #f8f8f8; /* 浅灰色 */
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>进制转换工具</h1>
+        
+        <div class="input-group">
+            <div class="input-row">
+                <label class="input-label" for="size-select">选择位数：</label>
+                <select id="size-select">
+                    <option value="8">1 字节 (8位)</option>
+                    <option value="16">2 字节 (16位)</option>
+                    <option value="32">4 字节 (32位)</option>
+                    <option value="64">8 字节 (64位)</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="input-group">
+            <div class="input-row">
+                <label class="input-label" for="decimal-input">十进制：</label>
+                <input type="text" id="decimal-input" placeholder="输入十进制数">
+            </div>
+        </div>
+
+        <div class="input-group">
+            <div class="input-row">
+                <label class="input-label">二进制：</label>
+                <div class="binary-container">
+                    <div id="binary-inputs" class="bit-container"></div>
+                    <button class="copy-button" onclick="copyBinary()">复制</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="input-group">
+            <div class="input-row">
+                <label class="input-label" for="hex-input">十六进制：</label>
+                <input type="text" id="hex-input" placeholder="输入十六进制数">
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentBits = 8;
+        
+        function createBinaryInputs(bits) {
+            const container = document.getElementById('binary-inputs');
+            container.innerHTML = '';
+            
+            for (let i = bits - 1; i >= 0; i--) {
+                const column = document.createElement('div');
+                column.className = 'bit-column';
+                
+                const position = document.createElement('div');
+                position.className = 'bit-position';
+                position.textContent = i;
+                
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.maxLength = 1;
+                input.className = 'bit-input';
+                const byteGroup = Math.floor(i / 8);
+                input.classList.add(`byte-group-${byteGroup}`);
+                
+                input.dataset.position = i;
+                input.value = '0';
+                
+                input.addEventListener('input', (e) => {
+                    const value = e.target.value;
+                    if (value !== '0' && value !== '1') {
+                        e.target.value = '0';
+                    }
+                    updateFromBinary();
+                });
+                
+                column.appendChild(position);
+                column.appendChild(input);
+                container.appendChild(column);
+                
+                if (i > 0 && i % 4 === 0) {
+                    const spacer = document.createElement('div');
+                    spacer.className = 'bit-spacer';
+                    container.appendChild(spacer);
+                }
+            }
+        }
+
+        function updateFromBinary() {
+            const inputs = Array.from(document.querySelectorAll('.bit-input'));
+            const binaryString = inputs.map(input => input.value).join('');
+            const decimal = parseInt(binaryString, 2);
+            
+            document.getElementById('decimal-input').value = decimal;
+            document.getElementById('hex-input').value = decimal.toString(16).toUpperCase().padStart(currentBits/4, '0');
+        }
+
+        function updateFromDecimal() {
+            const decimal = parseInt(document.getElementById('decimal-input').value) || 0;
+            const maxValue = Math.pow(2, currentBits) - 1;
+            const validDecimal = Math.max(0, Math.min(decimal, maxValue));
+            
+            const binary = validDecimal.toString(2).padStart(currentBits, '0');
+            const hex = validDecimal.toString(16).toUpperCase().padStart(currentBits/4, '0');
+            
+            document.getElementById('decimal-input').value = validDecimal;
+            document.getElementById('hex-input').value = hex;
+            
+            const inputs = document.querySelectorAll('.bit-input');
+            binary.split('').forEach((bit, index) => {
+                inputs[index].value = bit;
+            });
+        }
+
+        function updateFromHex() {
+            const hex = document.getElementById('hex-input').value;
+            const decimal = parseInt(hex, 16) || 0;
+            const maxValue = Math.pow(2, currentBits) - 1;
+            const validDecimal = Math.max(0, Math.min(decimal, maxValue));
+            
+            const binary = validDecimal.toString(2).padStart(currentBits, '0');
+            
+            document.getElementById('decimal-input').value = validDecimal;
+            document.getElementById('hex-input').value = validDecimal.toString(16).toUpperCase().padStart(currentBits/4, '0');
+            
+            const inputs = document.querySelectorAll('.bit-input');
+            binary.split('').forEach((bit, index) => {
+                inputs[index].value = bit;
+            });
+        }
+
+        function copyBinary() {
+            const inputs = Array.from(document.querySelectorAll('.bit-input'));
+            const binaryString = inputs.map(input => input.value).join('');
+            
+            // 创建临时文本区域
+            const textarea = document.createElement('textarea');
+            textarea.value = binaryString;
+            document.body.appendChild(textarea);
+            
+            // 选择并复制文本
+            textarea.select();
+            document.execCommand('copy');
+            
+            // 移除临时文本区域
+            document.body.removeChild(textarea);
+            
+            // 更改按钮文字提示复制成功
+            const copyButton = document.querySelector('.copy-button');
+            const originalText = copyButton.textContent;
+            copyButton.textContent = '已复制！';
+            setTimeout(() => {
+                copyButton.textContent = originalText;
+            }, 1000);
+        }
+
+        // 初始化和事件监听
+        document.getElementById('size-select').addEventListener('change', (e) => {
+            currentBits = parseInt(e.target.value);
+            createBinaryInputs(currentBits);
+            updateFromBinary();
+        });
+
+        document.getElementById('decimal-input').addEventListener('input', updateFromDecimal);
+        document.getElementById('hex-input').addEventListener('input', updateFromHex);
+
+        // 初始化页面
+        createBinaryInputs(currentBits);
+        updateFromBinary();
+    </script>
+</body>
+</html>
