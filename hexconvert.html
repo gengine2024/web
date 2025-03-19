@@ -54,6 +54,11 @@
             text-align: center;
             padding: 2px;
             font-size: 14px;
+            cursor: pointer;
+            background-color: white;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            user-select: none;
         }
         .bit-position {
             font-size: 10px;
@@ -185,26 +190,22 @@
                 position.className = 'bit-position';
                 position.textContent = i;
                 
-                const input = document.createElement('input');
-                input.type = 'text';
-                input.maxLength = 1;
-                input.className = 'bit-input';
+                const button = document.createElement('button');
+                button.className = 'bit-input';
                 const byteGroup = Math.floor(i / 8);
-                input.classList.add(`byte-group-${byteGroup}`);
+                button.classList.add(`byte-group-${byteGroup}`);
                 
-                input.dataset.position = i;
-                input.value = '0';
+                button.dataset.position = i;
+                button.textContent = '0';
                 
-                input.addEventListener('input', (e) => {
-                    const value = e.target.value;
-                    if (value !== '0' && value !== '1') {
-                        e.target.value = '0';
-                    }
+                button.addEventListener('click', (e) => {
+                    const currentValue = e.target.textContent;
+                    e.target.textContent = currentValue === '0' ? '1' : '0';
                     updateFromBinary();
                 });
                 
                 column.appendChild(position);
-                column.appendChild(input);
+                column.appendChild(button);
                 container.appendChild(column);
                 
                 if (i > 0 && i % 4 === 0) {
@@ -216,8 +217,8 @@
         }
 
         function updateFromBinary() {
-            const inputs = Array.from(document.querySelectorAll('.bit-input'));
-            const binaryString = inputs.map(input => input.value).join('');
+            const buttons = Array.from(document.querySelectorAll('.bit-input'));
+            const binaryString = buttons.map(button => button.textContent).join('');
             const decimal = parseInt(binaryString, 2);
             
             document.getElementById('decimal-input').value = decimal;
@@ -235,9 +236,9 @@
             document.getElementById('decimal-input').value = validDecimal;
             document.getElementById('hex-input').value = hex;
             
-            const inputs = document.querySelectorAll('.bit-input');
+            const buttons = document.querySelectorAll('.bit-input');
             binary.split('').forEach((bit, index) => {
-                inputs[index].value = bit;
+                buttons[index].textContent = bit;
             });
         }
 
@@ -252,15 +253,15 @@
             document.getElementById('decimal-input').value = validDecimal;
             document.getElementById('hex-input').value = validDecimal.toString(16).toUpperCase().padStart(currentBits/4, '0');
             
-            const inputs = document.querySelectorAll('.bit-input');
+            const buttons = document.querySelectorAll('.bit-input');
             binary.split('').forEach((bit, index) => {
-                inputs[index].value = bit;
+                buttons[index].textContent = bit;
             });
         }
 
         function copyBinary() {
-            const inputs = Array.from(document.querySelectorAll('.bit-input'));
-            const binaryString = inputs.map(input => input.value).join('');
+            const buttons = Array.from(document.querySelectorAll('.bit-input'));
+            const binaryString = buttons.map(button => button.textContent).join('');
             
             // 创建临时文本区域
             const textarea = document.createElement('textarea');
