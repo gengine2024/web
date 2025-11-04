@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>JSON Server 读写操作</title>
+    <style>
+        .container { max-width: 800px; margin: 20px auto; padding: 0 20px; }
+        .btn { padding: 8px 16px; margin: 5px; cursor: pointer; }
+        .result { margin-top: 20px; padding: 10px; border: 1px solid #eee; white-space: pre-wrap; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>JSON Server 数据操作</h1>
+        <button class="btn" onclick="readData()">读取数据（GET）</button>
+        <button class="btn" onclick="addData()">新增数据（POST）</button>
+        <button class="btn" onclick="updateData()">修改数据（PUT）</button>
+        <button class="btn" onclick="deleteData()">删除数据（DELETE）</button>
+        <div class="result" id="result"></div>
+    </div>
+
+    <script>
+        // 目标 JSON Server 地址
+        const baseUrl = 'https://my-json-server.typicode.com/gengine2024/web';
+
+        // 读取数据（GET）
+        async function readData() {
+            try {
+                const response = await fetch(baseUrl);
+                const data = await response.json();
+                showResult('读取成功：', data);
+            } catch (error) {
+                showResult('读取失败：', error.message);
+            }
+        }
+
+        // 新增数据（POST）
+        async function addData() {
+            const newData = {
+                userId: Date.now(), // 用时间戳作为唯一标识
+                id: Math.floor(Math.random() * 1000),
+                title: '新增测试标题',
+                body: '新增测试内容'
+            };
+
+            try {
+                const response = await fetch(baseUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(newData)
+                });
+                const data = await response.json();
+                showResult('新增成功：', data);
+            } catch (error) {
+                showResult('新增失败：', error.message);
+            }
+        }
+
+        // 修改数据（PUT）- 需指定要修改的资源ID（这里假设修改ID为1的数据）
+        async function updateData() {
+            const updateId = 1; // 需根据实际db.json中的ID调整
+            const updateData = {
+                userId: updateId,
+                id: updateId,
+                title: '修改后的标题',
+                body: '修改后的内容'
+            };
+
+            try {
+                const response = await fetch(`${baseUrl}/${updateId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(updateData)
+                });
+                const data = await response.json();
+                showResult('修改成功：', data);
+            } catch (error) {
+                showResult('修改失败：', error.message);
+            }
+        }
+
+        // 删除数据（DELETE）- 需指定要删除的资源ID（这里假设删除ID为2的数据）
+        async function deleteData() {
+            const deleteId = 2; // 需根据实际db.json中的ID调整
+
+            try {
+                const response = await fetch(`${baseUrl}/${deleteId}`, {
+                    method: 'DELETE'
+                });
+                showResult('删除成功：', `ID为${deleteId}的数据已删除`);
+            } catch (error) {
+                showResult('删除失败：', error.message);
+            }
+        }
+
+        // 显示结果到页面
+        function showResult(title, content) {
+            const resultDom = document.getElementById('result');
+            resultDom.textContent = `${title}\n${JSON.stringify(content, null, 2)}`;
+        }
+    </script>
+</body>
+</html>
