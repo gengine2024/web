@@ -230,6 +230,10 @@
                         <input type="radio" id="radio_input_dec" name="data_type" >
                         <label for="radio_input_dec">10进制</label>
                     </div>
+                    <div class="radio-item">
+                        <input type="radio" id="radio_input_edid" name="data_type" >
+                        <label for="radio_input_dec">EDID</label>
+                    </div>
                 </div>
             </div>
             <textarea id="input1" placeholder="eg1: 0xA0 0x54 0x6E 0x10&#10;eg2: 160 84 110 16&#10;&#10;eg3: 0xA0, 0x54, 0x6E, 0x10&#10;eg4: 160, 84, 110, 16"></textarea>
@@ -401,10 +405,22 @@
          * - "10, 11, 12, 14, 155"（逗号+空格分隔十进制）
          * - "0x0a 0x0b 0xc0, 0x10"（混合分隔符十六进制）
          * @param {string} input - 待转换的字符串
+         * @param {numble} data_type - 0:十进制，1:十六进制 2:EDID内容
          * @returns {Uint8Array} 转换后的 byte 数组（无符号8位整数数组）
          */
-        function stringToByteArray(input, isHex = false) {
+        function stringToByteArray(input, data_type = 1) {
             if (!input.trim()) return new Uint8Array(); // 返回空数组表示失败
+
+            // 处理EDID内容
+            if(data_type === 2){
+                const edidBytes = extractEDIDFromReg(input);
+                if(edidBytes === null){
+                    console.error("未找到有效的EDID数据");
+                    return new Uint8Array();
+                } else {
+                    return new Uint8Array(edidBytes);
+                }
+            }
             
             // 预处理字符串：统一分隔符格式，消除多余空格
             const processed = input
@@ -423,16 +439,16 @@
                 let value; // 存储解析后的数值
                 
                 // 判断是否为十六进制格式（支持 0x/0X 前缀）
-                if (part.startsWith('0x') || part.startsWith('0X')) {
+                if(data_type === 1){
+                    if (part.startsWith('0x') || part.startsWith('0X')) {
                     // 截取 0x/0X 后的部分，按十六进制解析
                     value = parseInt(part.slice(2), 16);
-                } else {
-                    // 非十六进制则按十进制解析
-                    if(isHex){
+                    } else {
+                        // 非十六进制则按十进制解析
                         value = parseInt(part, 16);
-                    } else{
-                        value = parseInt(part, 10);
                     }
+                } else {
+                    value = parseInt(part, 10);
                 }
                 
                 // 严格校验：确保解析结果是有效整数且在 byte 范围（0-255）内
@@ -447,6 +463,34 @@
             
             // 转换为标准的 Uint8Array（无符号8位整数数组）返回
             return new Uint8Array(byteArray);
+        }
+
+        /**
+         * 从注册表内容中提取 EDID 数据
+         * @param {string} regContent - 注册表内容字符串
+         * @returns {number[] | null} 提取到的 EDID 字节数组，若未找到则返回 null
+         */
+        function extractEDIDFromReg(regContent) {
+            // 匹配EDID字段，包含换行和空格的情况
+            const edidRegex = /"EDID"\s*=\s*hex:([\s\S]*?)(?=\r?\n\[|$)/;
+            const match = regContent.match(edidRegex);
+            
+            if (!match) return null;
+
+            // 处理匹配结果：移除换行符、反斜杠、空格和逗号
+            let hexStr = match[1]
+                .replace(/\\/g, '')    // 移除换行符转义符 \
+                .replace(/\s+/g, '')   // 移除所有空格
+                .replace(/,/g, '');    // 移除逗号
+
+            // 每两位转换为一个byte
+            const edidBytes = [];
+            for (let i = 0; i < hexStr.length; i += 2) {
+                const byte = parseInt(hexStr.substr(i, 2), 16);
+                edidBytes.push(byte);
+            }
+            
+            return edidBytes;
         }
 
         /**
@@ -508,7 +552,7 @@
         // 绑定按钮事件
         formatBtn.addEventListener('click', () => {
             outputResult.textContent = "";
-            const bytes = stringToByteArray(input1.value, radio_input_hex.checked ? true : false);
+            const bytes = stringToByteArray(input1.value, radio_input_hex.checked ? 1 : (radio_input_dec.checked ? 0 : 2));
             if(bytes.length === 0){
                 outputResult.textContent = "输入内容格式不合法";
                 return;
@@ -524,8 +568,8 @@
 
         checkSumBtn.addEventListener('click', () => {
             outputResult.textContent = "";
-            const bytes = stringToByteArray(input2.value, outputTypeSelect.value === 'hex' ? true : false);
-            const bytes1 = stringToByteArray(input1.value, radio_input_hex.checked ? true : false);
+            const bytes = stringToByteArray(input2.value, outputTypeSelect.value === 'dec' ? 0 : 1);
+            const bytes1 = stringToByteArray(input1.value, radio_input_hex.checked ? 1 : (radio_input_dec.checked ? 0 : 2));
             if(bytes.length === 0){
                 if(bytes1.length === 0){
                     outputResult.textContent = "无有效数据，无法计算";
