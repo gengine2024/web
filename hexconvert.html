@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hex Convert</title>
+    <title>Hex Convert & Byte数组处理工具</title>
     <style>
         body {
             font-family: Arial, sans-serif;
-            max-width: 100%;
+            max-width: 1000px;
             margin: 0 auto;
             padding: 20px;
             background-color: #f5f5f5;
@@ -17,6 +17,7 @@
             padding: 20px;
             border-radius: 8px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
         }
         .input-group {
             margin-bottom: 15px;
@@ -26,7 +27,7 @@
             margin-bottom: 5px;
             font-weight: bold;
         }
-        input {
+        input, textarea, select {
             padding: 8px;
             border: 1px solid #ddd;
             border-radius: 4px;
@@ -83,13 +84,14 @@
         .input-row {
             display: flex;
             align-items: center;
-            gap: 0px;
+            gap: 10px;
+            margin-bottom: 10px;
         }
         .input-label {
-            min-width: 80px;
+            min-width: 100px;
         }
-        .copy-button {
-            padding: 4px 12px;
+        .copy-button, button {
+            padding: 6px 12px;
             background-color: #4CAF50;
             color: white;
             border: none;
@@ -98,10 +100,10 @@
             font-size: 14px;
             margin-left: 10px;
         }
-        .copy-button:hover {
+        .copy-button:hover, button:hover {
             background-color: #45a049;
         }
-        .copy-button:active {
+        .copy-button:active, button:active {
             background-color: #3d8b40;
         }
         .binary-container {
@@ -131,6 +133,41 @@
         }
         .byte-group-7 {
             background-color: #f8f8f8; /* 浅灰色 */
+        }
+        textarea {
+            width: 100%;
+            min-height: 100px;
+            resize: vertical;
+        }
+        .radio-group {
+            display: flex;
+            gap: 1.5rem;
+            margin: 0.5rem 0;
+        }
+        .radio-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .output-group {
+            margin-top: 15px;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+        }
+        .output-title {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        #outputResult {
+            white-space: pre-wrap;
+            word-break: break-all;
+            font-family: monospace;
+        }
+        .section-divider {
+            height: 1px;
+            background-color: #ddd;
+            margin: 20px 0;
         }
     </style>
 </head>
@@ -175,7 +212,68 @@
         </div>
     </div>
 
+    <div class="section-divider"></div>
+
+    <div class="container">
+        <h1>Byte数组格式化与CheckSum计算工具</h1>
+        
+        <!-- 第一个输入框 -->
+        <div class="input-group">
+            <div class="input-row">
+                <label class="input-label">输入内容(数据类型):</label>
+                <div class="radio-group" id="radio_input_group">
+                    <div class="radio-item">
+                        <input type="radio" id="radio_input_hex" name="data_type" checked>
+                        <label for="radio_input_hex">16进制</label>
+                    </div>
+                    <div class="radio-item">
+                        <input type="radio" id="radio_input_dec" name="data_type" >
+                        <label for="radio_input_dec">10进制</label>
+                    </div>
+                </div>
+            </div>
+            <textarea id="input1" placeholder="eg1: 0xA0 0x54 0x6E 0x10&#10;eg2: 160 84 110 16&#10;&#10;eg3: 0xA0, 0x54, 0x6E, 0x10&#10;eg4: 160, 84, 110, 16"></textarea>
+        </div>
+        
+        <!-- 第二个输入框 -->
+        <div class="input-group">
+            <label for="input2">转换后数据:</label>
+            <!-- 选项设置 -->
+            <div class="input-row">
+                <div style="margin-right: 20px;">
+                    <label for="delimiter">分隔符选择</label>
+                    <select id="delimiter">
+                        <option value="space">空格</option>
+                        <option value="comma">逗号</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="outputType">输出类型选择</label>
+                    <select id="outputType">
+                        <option value="hex_with0x">16进制（0x前缀）</option>
+                        <option value="hex">16进制（不带0x前缀）</option>
+                        <option value="dec">10进制</option>
+                    </select>
+                </div>
+            </div>
+            <textarea id="input2"></textarea>
+        </div>
+        
+        <!-- 功能按钮 -->
+        <div class="input-row">
+            <button id="formatBtn">格式化Byte数组</button>
+            <button id="checkSumBtn">计算CheckSum</button>
+        </div>
+        
+        <!-- 输出结果区域 -->
+        <div class="output-group">
+            <div class="output-title">处理结果：</div>
+            <pre id="outputResult"></pre>
+        </div>
+    </div>
+
     <script>
+        // 第一部分：Hex Convert 功能
         let currentBits = 8;
         
         function createBinaryInputs(bits) {
@@ -283,6 +381,170 @@
                 copyButton.textContent = originalText;
             }, 1000);
         }
+
+        // 第二部分：Byte数组处理工具功能
+        // 获取DOM元素
+        const input1 = document.getElementById('input1');
+        const radio_input_hex = document.getElementById('radio_input_hex');        
+        const radio_input_dec = document.getElementById('radio_input_dec');
+        const input2 = document.getElementById('input2');
+        const delimiterSelect = document.getElementById('delimiter');
+        const outputTypeSelect = document.getElementById('outputType');
+        const formatBtn = document.getElementById('formatBtn');
+        const checkSumBtn = document.getElementById('checkSumBtn');
+        const outputResult = document.getElementById('outputResult');
+
+        /**
+         * 将多种格式的字符串转换为 Uint8Array 类型的 byte 数组
+         * 支持的输入格式示例：
+         * - "10 11 12 14 155"（空格分隔十进制）
+         * - "10, 11, 12, 14, 155"（逗号+空格分隔十进制）
+         * - "0x0a 0x0b 0xc0, 0x10"（混合分隔符十六进制）
+         * @param {string} input - 待转换的字符串
+         * @returns {Uint8Array} 转换后的 byte 数组（无符号8位整数数组）
+         */
+        function stringToByteArray(input, isHex = false) {
+            if (!input.trim()) return new Uint8Array(); // 返回空数组表示失败
+            
+            // 预处理字符串：统一分隔符格式，消除多余空格
+            const processed = input
+                .replace(/,/g, ' ')       // 将所有逗号替换为空格，统一分隔符类型
+                .replace(/\s+/g, ' ')     // 将多个连续空格合并为单个空格（处理"  11  "这类情况）
+                .trim();                  // 去除字符串首尾的空格（避免分割出空字符串）
+            
+            // 按空格分割为独立的数值字符串，并过滤空字符串（处理首尾空格残留）
+            const parts = processed.split(' ').filter(part => part);
+            
+            // 存储解析后的 byte 数值
+            const byteArray = [];
+            
+            // 遍历每个数值片段进行解析
+            for (const part of parts) {
+                let value; // 存储解析后的数值
+                
+                // 判断是否为十六进制格式（支持 0x/0X 前缀）
+                if (part.startsWith('0x') || part.startsWith('0X')) {
+                    // 截取 0x/0X 后的部分，按十六进制解析
+                    value = parseInt(part.slice(2), 16);
+                } else {
+                    // 非十六进制则按十进制解析
+                    if(isHex){
+                        value = parseInt(part, 16);
+                    } else{
+                        value = parseInt(part, 10);
+                    }
+                }
+                
+                // 严格校验：确保解析结果是有效整数且在 byte 范围（0-255）内
+                if (isNaN(value) || !Number.isInteger(value) || value < 0 || value > 255) {
+                    console.error(`无效的byte值: ${part} (解析结果: ${value})`);
+                    return new Uint8Array(); // 返回空数组表示失败
+                }
+                
+                // 将有效数值加入数组
+                byteArray.push(value);
+            }
+            
+            // 转换为标准的 Uint8Array（无符号8位整数数组）返回
+            return new Uint8Array(byteArray);
+        }
+
+        /**
+         * 将 byte 数组格式化为指定风格的字符串
+         * @param {Uint8Array | number[]} byteArray - 输入的 byte 数组（Uint8Array 或普通数字数组）
+         * @param {Object} options - 格式化选项
+         * @param {string} [options.separator=', '] - 分隔符（eg: ', '，' '等）
+         * @param {string} [options.format='hex'] - 数值格式（eg: decimal[十进制]，hex[十六进制]）
+         * @param {boolean} [options.with0x=true] - 十六进制时是否带 0x 前缀（format 为 hex 时生效）
+         * @param {boolean} [options.uppercase=false] - 十六进制时是否大写（format 为 hex 时生效）
+         * @returns {string} 格式化后的字符串
+         */
+        function formatByteArray(byteArray, options = {}) {
+            // 默认配置
+            const {
+                separator = ', ',
+                format = 'hex',
+                with0x = true,
+                uppercase = false
+            } = options;
+
+            // 转换为普通数组（兼容 Uint8Array 和普通数组）
+            const arr = Array.from(byteArray);
+
+            return arr.map(byte => {
+                if (format === 'decimal') {
+                    // 十进制格式
+                    return byte.toString(10);
+                } else if (format === 'hex') {
+                    // 十六进制格式
+                    let hexStr = byte.toString(16).padStart(2, '0'); // 补零到两位
+                    hexStr = uppercase ? hexStr.toUpperCase() : hexStr.toLowerCase();
+                    return with0x ? `0x${hexStr}` : hexStr;
+                } else {
+                    console.error(`不支持的格式: ${format}，可选值：decimal/hex`)
+                    return "";
+                }
+            }).join(separator);
+        }
+
+        // 计算CheckSum（异或校验）
+        function calculateCheckSum(bytes) {
+            if (bytes.length === 0) return '无有效数据，无法计算';
+
+            let checkSum = 0;
+            bytes.forEach(byte => {
+                checkSum ^= byte; // 异或运算
+            });
+
+            // 根据输出类型格式化结果
+            const outputType = outputTypeSelect.value;
+            if (outputType === 'dec') {
+                return `CheckSum（异或校验）: ${checkSum.toString(10)}`;
+            } else {
+                return `CheckSum（异或校验）: 0x${checkSum.toString(16).padStart(2, '0').toUpperCase()}`;
+            }
+        }
+
+        // 绑定按钮事件
+        formatBtn.addEventListener('click', () => {
+            outputResult.textContent = "";
+            const bytes = stringToByteArray(input1.value, radio_input_hex.checked ? true : false);
+            if(bytes.length === 0){
+                outputResult.textContent = "输入内容格式不合法";
+                return;
+            }
+
+            input2.value = formatByteArray(bytes, {
+                separator: delimiterSelect.value === 'space' ? ' ' : ', ',
+                format: outputTypeSelect.value === 'dec' ? 'decimal' : 'hex',
+                with0x: outputTypeSelect.value === 'hex_with0x' ? true : false,
+                uppercase: true
+            });
+        });
+
+        checkSumBtn.addEventListener('click', () => {
+            outputResult.textContent = "";
+            const bytes = stringToByteArray(input2.value, outputTypeSelect.value === 'hex' ? true : false);
+            const bytes1 = stringToByteArray(input1.value, radio_input_hex.checked ? true : false);
+            if(bytes.length === 0){
+                if(bytes1.length === 0){
+                    outputResult.textContent = "无有效数据，无法计算";
+                    return;
+                }
+
+                input2.value = formatByteArray(bytes1, {
+                    separator: delimiterSelect.value === 'space' ? ' ' : ', ',
+                    format: outputTypeSelect.value === 'dec' ? 'decimal' : 'hex',
+                    with0x: outputTypeSelect.value === 'hex_with0x' ? true : false,
+                    uppercase: true
+                });   
+                
+                outputResult.textContent = calculateCheckSum(bytes1);             
+            } else {
+                outputResult.textContent = calculateCheckSum(bytes);
+            }
+
+        });
 
         // 初始化和事件监听
         document.getElementById('size-select').addEventListener('change', (e) => {
