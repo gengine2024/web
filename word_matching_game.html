@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>单词配对游戏</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: Arial, sans-serif;
+        }
+        body {
+            background: #1a1a2e;
+            color: #fff;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        /* 页面容器通用样式 */
+        .page {
+            max-width: 1000px;
+            width: 100%;
+            background: #16213e;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.3);
+            display: none;
+        }
+        .page.active {
+            display: block;
+        }
+        /* 开始页 */
+        #start-page {
+            text-align: center;
+            padding: 50px 20px;
+        }
+        #start-page h1 {
+            font-size: 2.5rem;
+            margin-bottom: 40px;
+            color: #00f5d4;
+        }
+        .btn {
+            padding: 15px 30px;
+            font-size: 1.2rem;
+            border: none;
+            border-radius: 8px;
+            background: #00f5d4;
+            color: #16213e;
+            font-weight: bold;
+            cursor: pointer;
+            margin: 10px;
+            transition: transform 0.2s;
+        }
+        .btn:hover {
+            transform: scale(1.05);
+        }
+        /* 设置页 */
+        #setting-page h2 {
+            margin-bottom: 20px;
+            color: #00f5d4;
+            text-align: center;
+        }
+        .word-input-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .word-input-group input {
+            flex: 1;
+            padding: 12px;
+            border: 2px solid #00f5d4;
+            border-radius: 8px;
+            background: #0f3460;
+            color: #fff;
+            font-size: 1rem;
+        }
+        /* 批量导入区域 */
+        .batch-import {
+            margin: 20px 0;
+            padding: 15px;
+            border: 2px dashed #00f5d4;
+            border-radius: 8px;
+        }
+        .batch-import textarea {
+            width: 100%;
+            height: 120px;
+            padding: 12px;
+            border: 2px solid #00f5d4;
+            border-radius: 8px;
+            background: #0f3460;
+            color: #fff;
+            font-size: 1rem;
+            resize: none;
+            margin: 10px 0;
+        }
+        .batch-import .tips {
+            font-size: 0.9rem;
+            color: #999;
+            margin-bottom: 10px;
+        }
+        #word-list {
+            margin: 20px 0;
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid #00f5d4;
+            border-radius: 8px;
+            padding: 10px;
+        }
+        .word-item {
+            padding: 8px;
+            border-bottom: 1px solid #0f3460;
+            display: flex;
+            justify-content: space-between;
+        }
+        /* 游戏页 - 左右分栏布局 */
+        #game-page h2 {
+            text-align: center;
+            margin-bottom: 20px;
+            color: #00f5d4;
+        }
+        .streak {
+            text-align: center;
+            margin-bottom: 20px;
+            font-size: 1.2rem;
+            color: #00f5d4;
+        }
+        .game-layout {
+            display: flex;
+            gap: 20px;
+            width: 100%;
+        }
+        .card-column {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 20px; /* 增大垂直间距，解决贴太紧问题 */
+        }
+        .column-title {
+            text-align: center;
+            font-size: 1.2rem;
+            color: #00f5d4;
+            margin-bottom: 15px;
+        }
+        .card {
+            padding: 20px;
+            background: #0f3460;
+            border: 2px solid #00f5d4;
+            border-radius: 8px;
+            text-align: center;
+            font-size: 1.2rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .card:hover:not(.locked) { /* 锁定卡片不触发hover */
+            background: #1a508b;
+        }
+        .card.selected {
+            background: #1a508b;
+            border-color: #00ffaa;
+        }
+        .card.locked {
+            background: #2c3e50;
+            border-color: #666;
+            cursor: not-allowed;
+            opacity: 0.7;
+        }
+        .game-over {
+            text-align: center;
+            margin-top: 30px;
+            font-size: 1.5rem;
+            color: #00f5d4;
+        }
+        /* 按钮反灰样式 */
+        .btn.gray {
+            background: #666;
+            color: #ccc;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+    </style>
+</head>
+<body>
+    <!-- 开始页 -->
+    <div id="start-page" class="page active">
+        <h1>单词配对游戏</h1>
+        <button class="btn" onclick="showPage('setting-page')">设置单词库</button>
+        <button class="btn" onclick="showPage('game-page')">开始游戏</button>
+    </div>
+
+    <!-- 设置页（增加批量导入） -->
+    <div id="setting-page" class="page">
+        <h2>自定义单词库</h2>
+        <div class="word-input-group">
+            <input type="text" id="cn-word" placeholder="输入中文（如：七）">
+            <input type="text" id="en-word" placeholder="输入英文（如：seven）">
+            <button class="btn" onclick="addWord()">添加</button>
+        </div>
+
+        <!-- 批量导入区域 -->
+        <div class="batch-import">
+            <div class="tips">批量导入格式：英文|中文;英文|中文（例：one|一;two|二;three|三）</div>
+            <textarea id="batch-word-input" placeholder="请输入批量单词，按指定格式"></textarea>
+            <button class="btn" onclick="batchImportWords()">批量导入</button>
+        </div>
+
+        <div id="word-list">
+            <div class="word-item">暂无单词，请添加</div>
+        </div>
+        <button class="btn" onclick="showPage('start-page')">返回开始页</button>
+    </div>
+
+    <!-- 游戏页（左右分栏：左中文，右英文） -->
+    <div id="game-page" class="page">
+        <h2>单词配对</h2>
+        <div class="streak">连击次数：<span id="streak-count">0</span></div>
+        <div class="game-layout">
+            <!-- 左侧中文卡片列 -->
+            <div class="card-column">
+                <div class="column-title">中文</div>
+                <div id="cn-card-container"></div>
+            </div>
+            <!-- 右侧英文卡片列 -->
+            <div class="card-column">
+                <div class="column-title">英文</div>
+                <div id="en-card-container"></div>
+            </div>
+        </div>
+        <div class="game-over" id="game-over" style="display: none;">
+            恭喜！所有单词已完成2遍配对 ✨
+        </div>
+        <button class="btn" id="game-back-btn" style="margin-top: 20px;" onclick="showPage('start-page')">返回开始页</button>
+    </div>
+
+    <script>
+        // 全局单词库（格式：[{cn: '七', en: 'seven'}, ...]）
+        let wordLibrary = JSON.parse(localStorage.getItem('wordLibrary')) || [];
+        let selectedCnCard = null; // 选中的中文卡片
+        let selectedEnCard = null; // 选中的英文卡片
+        let streakCount = 0; // 连击次数
+        let doubleWordPool = []; // 双倍单词池（每个单词存2次）
+        let usedWordIds = new Set(); // 已使用的单词ID（避免重复出现）
+        let totalPairs = 0; // 总配对数（单词库长度*2）
+        let matchedPairs = 0; // 已完成配对数
+
+        // 生成唯一ID（用于标记单词实例）
+        function generateId() {
+            return Date.now() + '-' + Math.floor(Math.random() * 1000);
+        }
+
+        // 切换页面
+        function showPage(pageId) {
+            // 隐藏所有页面
+            document.querySelectorAll('.page').forEach(page => {
+                page.classList.remove('active');
+            });
+            // 显示目标页面
+            document.getElementById(pageId).classList.add('active');
+            
+            // 进入游戏页时初始化游戏
+            if (pageId === 'game-page') {
+                initGame();
+            }
+            // 进入设置页时渲染单词列表
+            if (pageId === 'setting-page') {
+                renderWordList();
+            }
+        }
+
+        // 单个添加单词
+        function addWord() {
+            const cn = document.getElementById('cn-word').value.trim();
+            const en = document.getElementById('en-word').value.trim();
+            if (!cn || !en) {
+                alert('请输入完整的中英文！');
+                return;
+            }
+            // 避免重复添加
+            const isDuplicate = wordLibrary.some(item => item.cn === cn || item.en === en);
+            if (isDuplicate) {
+                alert('该单词已存在！');
+                return;
+            }
+            // 添加到单词库
+            wordLibrary.push({ cn, en });
+            localStorage.setItem('wordLibrary', JSON.stringify(wordLibrary));
+            // 清空输入框
+            document.getElementById('cn-word').value = '';
+            document.getElementById('en-word').value = '';
+            // 重新渲染列表
+            renderWordList();
+        }
+
+        // 批量导入单词
+        function batchImportWords() {
+            const batchText = document.getElementById('batch-word-input').value.trim();
+            if (!batchText) {
+                alert('请输入批量导入的单词内容！');
+                return;
+            }
+
+            // 拆分单词对（;分隔）
+            const wordPairs = batchText.split(';');
+            let successCount = 0;
+            let duplicateCount = 0;
+            let errorCount = 0;
+
+            wordPairs.forEach(pair => {
+                if (!pair.trim()) return;
+                // 拆分中英文（|分隔）
+                const [en, cn] = pair.split('|').map(item => item.trim());
+                if (!en || !cn) {
+                    errorCount++;
+                    return;
+                }
+                // 检查重复
+                const isDuplicate = wordLibrary.some(item => item.cn === cn || item.en === en);
+                if (isDuplicate) {
+                    duplicateCount++;
+                    return;
+                }
+                // 添加到单词库
+                wordLibrary.push({ cn, en });
+                successCount++;
+            });
+
+            // 保存到本地存储
+            localStorage.setItem('wordLibrary', JSON.stringify(wordLibrary));
+            // 清空文本框
+            document.getElementById('batch-word-input').value = '';
+            // 重新渲染列表
+            renderWordList();
+
+            // 提示导入结果
+            alert(`批量导入完成！
+成功添加：${successCount} 组
+重复跳过：${duplicateCount} 组
+格式错误：${errorCount} 组`);
+        }
+
+        // 渲染设置页的单词列表
+        function renderWordList() {
+            const listEl = document.getElementById('word-list');
+            if (wordLibrary.length === 0) {
+                listEl.innerHTML = '<div class="word-item">暂无单词，请添加</div>';
+                return;
+            }
+            listEl.innerHTML = '';
+            wordLibrary.forEach(item => {
+                const itemEl = document.createElement('div');
+                itemEl.className = 'word-item';
+                itemEl.textContent = `${item.cn} → ${item.en}`;
+                listEl.appendChild(itemEl);
+            });
+        }
+
+        // 初始化游戏（构建双倍单词池+生成卡片）
+        function initGame() {
+            if (wordLibrary.length < 1) {
+                alert('请先在设置页添加至少1组单词！');
+                showPage('setting-page');
+                return;
+            }
+            
+            // 重置所有游戏状态
+            selectedCnCard = null;
+            selectedEnCard = null;
+            streakCount = 0;
+            matchedPairs = 0;
+            usedWordIds.clear();
+            doubleWordPool = [];
+            document.getElementById('streak-count').textContent = '0';
+            document.getElementById('game-over').style.display = 'none';
+            document.getElementById('game-back-btn').classList.remove('gray'); // 恢复按钮样式
+
+            // 构建双倍单词池（每个单词生成2个实例，带唯一ID）
+            wordLibrary.forEach(word => {
+                // 每个单词添加2次，带不同ID
+                doubleWordPool.push({ ...word, id: generateId() });
+                doubleWordPool.push({ ...word, id: generateId() });
+            });
+            totalPairs = doubleWordPool.length; // 总配对数 = 双倍单词池长度
+
+            // 清空卡片容器
+            const cnContainer = document.getElementById('cn-card-container');
+            const enContainer = document.getElementById('en-card-container');
+            cnContainer.innerHTML = '';
+            enContainer.innerHTML = '';
+
+            // 生成初始卡片
+            generateCards();
+        }
+
+        // 生成/补充卡片（从双倍单词池取未使用的，保证场上最多5组）
+        function generateCards() {
+            const cnContainer = document.getElementById('cn-card-container');
+            const enContainer = document.getElementById('en-card-container');
+
+            // 场上已有的未锁定卡片对应的ID
+            const displayedIds = new Set(
+                Array.from(cnContainer.querySelectorAll('.card')).map(card => card.dataset.wordId)
+            );
+
+            // 未使用且未在场上的单词实例
+            const unusedWords = doubleWordPool.filter(
+                word => !usedWordIds.has(word.id) && !displayedIds.has(word.id)
+            );
+
+            // 若场上已满5组或没有可补充的词，直接退出
+            if (displayedIds.size >= 5 || unusedWords.length === 0) {
+                checkGameOver();
+                return;
+            }
+
+            // 补充到5组
+            const need = 5 - displayedIds.size;
+            const newWords = [...unusedWords]
+                .sort(() => Math.random() - 0.5)
+                .slice(0, need);
+
+            // 添加左侧中文卡片
+            newWords.forEach(word => {
+                const cardEl = document.createElement('div');
+                cardEl.className = 'card';
+                cardEl.textContent = word.cn;
+                cardEl.dataset.pair = word.en;
+                cardEl.dataset.wordId = word.id;
+                cardEl.addEventListener('click', () => selectCnCard(cardEl));
+                cnContainer.appendChild(cardEl);
+            });
+
+            // 添加右侧英文卡片（同批次再随机）
+            [...newWords].sort(() => Math.random() - 0.5).forEach(word => {
+                const cardEl = document.createElement('div');
+                cardEl.className = 'card';
+                cardEl.textContent = word.en;
+                cardEl.dataset.pair = word.cn;
+                cardEl.dataset.wordId = word.id;
+                cardEl.addEventListener('click', () => selectEnCard(cardEl));
+                enContainer.appendChild(cardEl);
+            });
+
+            // 为打乱整体顺序，随机重排左右列
+            shuffleChildren(cnContainer);
+            shuffleChildren(enContainer);
+        }
+
+        // 随机打乱容器内子元素顺序
+        function shuffleChildren(container) {
+            const nodes = Array.from(container.children);
+            nodes.sort(() => Math.random() - 0.5);
+            nodes.forEach(node => container.appendChild(node));
+        }
+
+        // 选择左侧中文卡片
+        function selectCnCard(cardEl) {
+            // 已锁定的卡片不可点击
+            if (cardEl.classList.contains('locked')) return;
+
+            // 取消之前选中的中文卡片样式
+            if (selectedCnCard) {
+                selectedCnCard.classList.remove('selected');
+            }
+            // 选中当前卡片
+            selectedCnCard = cardEl;
+            selectedCnCard.classList.add('selected');
+
+            // 如果已经选中了英文卡片，立即检查配对
+            if (selectedEnCard) {
+                checkMatch();
+            }
+        }
+
+        // 选择右侧英文卡片
+        function selectEnCard(cardEl) {
+            // 已锁定的卡片不可点击
+            if (cardEl.classList.contains('locked')) return;
+
+            // 取消之前选中的英文卡片样式
+            if (selectedEnCard) {
+                selectedEnCard.classList.remove('selected');
+            }
+            // 选中当前卡片
+            selectedEnCard = cardEl;
+            selectedEnCard.classList.add('selected');
+
+            // 如果已经选中了中文卡片，立即检查配对
+            if (selectedCnCard) {
+                checkMatch();
+            }
+        }
+
+        // 替换匹配成功的两个卡片为新内容
+        function replaceMatchedCards(cnCard, enCard) {
+            // 获取场上已有的未锁定卡片对应的ID
+            const cnContainer = document.getElementById('cn-card-container');
+            const enContainer = document.getElementById('en-card-container');
+            const displayedIds = new Set(
+                Array.from(cnContainer.querySelectorAll('.card:not(.locked)')).map(card => card.dataset.wordId)
+            );
+
+            // 从未使用且未在场上的单词实例中取一个
+            const unusedWords = doubleWordPool.filter(
+                word => !usedWordIds.has(word.id) && !displayedIds.has(word.id)
+            );
+
+            if (unusedWords.length === 0) {
+                // 没有可替换的单词了，保持卡片但保持锁定状态（反灰）
+                // 卡片已经处于锁定状态，不需要额外操作
+                checkGameOver();
+                return;
+            }
+
+            // 随机取一个未使用的单词
+            const newWord = unusedWords[Math.floor(Math.random() * unusedWords.length)];
+
+            // 替换中文卡片内容
+            cnCard.textContent = newWord.cn;
+            cnCard.dataset.pair = newWord.en;
+            cnCard.dataset.wordId = newWord.id;
+            cnCard.classList.remove('locked');
+            cnCard.classList.remove('selected');
+
+            // 替换英文卡片内容
+            enCard.textContent = newWord.en;
+            enCard.dataset.pair = newWord.cn;
+            enCard.dataset.wordId = newWord.id;
+            enCard.classList.remove('locked');
+            enCard.classList.remove('selected');
+        }
+
+        // 检查配对是否成功
+        function checkMatch() {
+            // 验证配对关系（中文卡片的配对英文 = 英文卡片文本）
+            const isMatched = selectedCnCard.dataset.pair === selectedEnCard.textContent;
+            const cnWordId = selectedCnCard.dataset.wordId;
+            const enWordId = selectedEnCard.dataset.wordId;
+
+            if (isMatched) {
+                // 配对成功
+                streakCount++;
+                document.getElementById('streak-count').textContent = streakCount;
+                
+                // 锁定配对成功的卡片
+                selectedCnCard.classList.add('locked');
+                selectedEnCard.classList.add('locked');
+                selectedCnCard.classList.remove('selected');
+                selectedEnCard.classList.remove('selected');
+
+                // 标记该单词实例为已使用（每个ID只标记一次）
+                usedWordIds.add(cnWordId);
+                usedWordIds.add(enWordId);
+                matchedPairs++;
+
+                // 在重置前保存当前匹配到的元素引用，避免异步置空
+                const matchedCn = selectedCnCard;
+                const matchedEn = selectedEnCard;
+
+                // 延迟替换卡片（视觉更友好）
+                setTimeout(() => {
+                    // 只替换匹配成功的两个卡片
+                    replaceMatchedCards(matchedCn, matchedEn);
+                    // 检查游戏是否结束
+                    checkGameOver();
+                }, 500);
+
+            } else {
+                // 配对失败
+                streakCount = 0;
+                document.getElementById('streak-count').textContent = '0';
+                // 取消选中样式
+                selectedCnCard.classList.remove('selected');
+                selectedEnCard.classList.remove('selected');
+            }
+
+            // 重置选中状态
+            selectedCnCard = null;
+            selectedEnCard = null;
+        }
+
+        // 检查游戏是否结束
+        function checkGameOver() {
+            // 所有单词实例都已使用（完成2遍配对）
+            const allUsed = usedWordIds.size === doubleWordPool.length;
+            
+            if (allUsed || matchedPairs >= totalPairs) {
+                document.getElementById('game-over').style.display = 'block';
+                // 锁定所有剩余卡片
+                document.querySelectorAll('.card').forEach(card => {
+                    card.classList.add('locked');
+                });
+                // 返回按钮反灰
+                document.getElementById('game-back-btn').classList.add('gray');
+            }
+        }
+    </script>
+</body>
+</html>
