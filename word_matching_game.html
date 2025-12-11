@@ -154,6 +154,8 @@
             font-size: 1.2rem;
             cursor: pointer;
             transition: all 0.2s;
+			margin-bottom:10px;
+			height:80px;
         }
         .card:hover:not(.locked) { /* 锁定卡片不触发hover */
             background: #1a508b;
@@ -205,12 +207,14 @@
             <div class="tips">批量导入格式：英文|中文;英文|中文（例：one|一;two|二;three|三）</div>
             <textarea id="batch-word-input" placeholder="请输入批量单词，按指定格式"></textarea>
             <button class="btn" onclick="batchImportWords()">批量导入</button>
+            <button class="btn" onclick="batchDeleteWords()">删除词库</button>
         </div>
 
         <div id="word-list">
             <div class="word-item">暂无单词，请添加</div>
         </div>
         <button class="btn" onclick="showPage('start-page')">返回开始页</button>
+        <button class="btn" onclick="showPage('game-page')">立即开始</button>
     </div>
 
     <!-- 游戏页（左右分栏：左中文，右英文） -->
@@ -253,6 +257,15 @@
 
         // 切换页面
         function showPage(pageId) {
+		
+            // 进入游戏页时初始化游戏
+            if (pageId === 'game-page') {
+				if(Object.keys(wordLibrary).length === 0){					
+					alert('请新输入单词库！');
+					pageId="setting-page"
+				} 
+            }
+			
             // 隐藏所有页面
             document.querySelectorAll('.page').forEach(page => {
                 page.classList.remove('active');
@@ -316,6 +329,11 @@
                     errorCount++;
                     return;
                 }
+				
+				if (Object.keys(wordLibrary).length === 0) {
+					wordLibrary = [];
+				}
+				
                 // 检查重复
                 const isDuplicate = wordLibrary.some(item => item.cn === cn || item.en === en);
                 if (isDuplicate) {
@@ -341,10 +359,15 @@
 格式错误：${errorCount} 组`);
         }
 
+		function batchDeleteWords(){
+			localStorage.setItem('wordLibrary', "[]");
+			// 重新渲染列表
+            renderWordList();
+		}
         // 渲染设置页的单词列表
         function renderWordList() {
             const listEl = document.getElementById('word-list');
-            if (wordLibrary.length === 0) {
+            if (Object.keys(wordLibrary).length === 0) {
                 listEl.innerHTML = '<div class="word-item">暂无单词，请添加</div>';
                 return;
             }
@@ -592,8 +615,6 @@
                 document.querySelectorAll('.card').forEach(card => {
                     card.classList.add('locked');
                 });
-                // 返回按钮反灰
-                document.getElementById('game-back-btn').classList.add('gray');
             }
         }
     </script>
